@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Newtonsoft.Json;
 
 namespace rezervace_kina
 {
@@ -20,14 +22,17 @@ namespace rezervace_kina
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string jsonpath = "filmy.json";
+
+        private static List<string> jsonlist = new List<string>();
+        private string jsonText; 
+
         private int rows = 7;
         private int columns = 22;
 
         Grid CreateGrid()
         {
             Grid myGrid = new Grid();
-            myGrid.Width = 700;
-            myGrid.Height = 300;
 
             
             //myGrid.HorizontalAlignment = HorizontalAlignment.Left;
@@ -49,7 +54,8 @@ namespace rezervace_kina
                     if (j == 0)
                     {
                         Label lbl = new Label();
-                        lbl.Content = "platno";
+                        lbl.Name = "platno";
+                        lbl.Content = jsonText;
                         lbl.HorizontalContentAlignment = HorizontalAlignment.Center;
                         lbl.Background = Brushes.DarkGray;
                         lbl.Foreground = Brushes.White;
@@ -69,7 +75,10 @@ namespace rezervace_kina
                     else
                     {
                         Button btn = new Button();
-                        btn.Content = i.ToString();
+                        btn.Content = ($"{j} - {i}").ToString();
+                        btn.HorizontalAlignment = HorizontalAlignment.Stretch;
+                        btn.VerticalAlignment = VerticalAlignment.Stretch;
+                        
                         Grid.SetRow(btn, j);
                         Grid.SetColumn(btn, i);
                         myGrid.Children.Add(btn);
@@ -81,11 +90,29 @@ namespace rezervace_kina
 
             return myGrid;
         }
+
+        void ReadFile()
+        {
+            if (File.Exists(jsonpath))
+            {
+                string real = File.ReadAllText(jsonpath);
+                /*List<Projection> jsonData = JsonConvert.DeserializeObject<List<Projection>>(real);
+                for (int i = 0; i < jsonData.Count; i++)
+                {
+                    Console.WriteLine();                    
+                }*/
+            }
+            else
+            {
+                jsonText = "nejde";
+            }
+        }
         public MainWindow()
         {
             
             InitializeComponent();
             Title = "Kino";
+            ReadFile();
             Content = CreateGrid();
 
         }
