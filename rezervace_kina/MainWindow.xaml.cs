@@ -24,12 +24,37 @@ namespace rezervace_kina
     {
         private string jsonpath = "filmy.json";
 
+        private Button sub;
+
+        private List<Projection> projections;
+
         private static List<string> jsonlist = new List<string>();
-        private string jsonText; 
+        //private string jsonText; 
 
         private int rows = 7;
         private int columns = 22;
 
+        private Brush unavailable = Brushes.DarkGray;
+        private Brush sold = Brushes.Crimson;
+        private Brush selected = Brushes.LightBlue;
+        private Brush reserved = Brushes.DarkOrange;
+        Brush unoccupied = Brushes.LightGray;
+
+        void listvju()
+        {
+
+
+            ListView listView = new ListView();
+            for (int i = 0; i < projections.Count; i++)
+            {
+                string it = projections[i].name;
+                ListViewItem item = new ListViewItem();
+                listView.Items.Add(item);
+            }
+
+
+            
+        }
         Grid CreateGrid()
         {
             Grid myGrid = new Grid();
@@ -55,7 +80,7 @@ namespace rezervace_kina
                     {
                         Label lbl = new Label();
                         lbl.Name = "platno";
-                        lbl.Content = jsonText;
+                        lbl.Content = "platno";
                         lbl.HorizontalContentAlignment = HorizontalAlignment.Center;
                         lbl.Background = Brushes.DarkGray;
                         lbl.Foreground = Brushes.White;
@@ -78,7 +103,9 @@ namespace rezervace_kina
                         btn.Content = ($"{j} - {i}").ToString();
                         btn.HorizontalAlignment = HorizontalAlignment.Stretch;
                         btn.VerticalAlignment = VerticalAlignment.Stretch;
-                        
+                        btn.Click += seatClick;
+
+
                         Grid.SetRow(btn, j);
                         Grid.SetColumn(btn, i);
                         myGrid.Children.Add(btn);
@@ -96,22 +123,81 @@ namespace rezervace_kina
             if (File.Exists(jsonpath))
             {
                 string real = File.ReadAllText(jsonpath);
-                /*List<Projection> jsonData = JsonConvert.DeserializeObject<List<Projection>>(real);
-                for (int i = 0; i < jsonData.Count; i++)
-                {
-                    Console.WriteLine();                    
-                }*/
+                List<Projection> jsonData = JsonConvert.DeserializeObject<List<Projection>>(real);
+                projections = jsonData;
+                rows = jsonData[0].cinema.rows;
+                columns = jsonData[0].cinema.columns;
+                this.Title = jsonData[0].cinema.name;
             }
             else
             {
-                jsonText = "nejde";
+            }
+        }
+
+        void seatClick(object sender, RoutedEventArgs e)
+        {
+            Button seatButton = (Button)sender;
+            sub = seatButton;
+
+            Window popup = new Window();
+            Grid seatOptions = new Grid();
+            for (int i = 0; i < 3; i++)
+            {
+                seatOptions.ColumnDefinitions.Add(new ColumnDefinition());
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                seatOptions.RowDefinitions.Add(new RowDefinition());
+            }
+            Button Reserved = new Button();
+            Reserved.Content = "Reserved";
+            Reserved.Click += state;
+            Grid.SetRow(Reserved, 2);
+            Grid.SetColumn(Reserved, 0);
+
+            Button Sold = new Button();
+            Sold.Content = "Sold";
+            Sold.Click += state;
+            Grid.SetRow(Sold, 2);
+            Grid.SetColumn(Sold, 1);
+
+            Button Unavailable = new Button();
+            Unavailable.Content = "Unavailable";
+            Unavailable.Click += state;
+            Grid.SetRow(Unavailable, 2);
+            Grid.SetColumn(Unavailable, 2);
+
+            seatOptions.Children.Add(Reserved);
+            seatOptions.Children.Add(Sold);
+            seatOptions.Children.Add(Unavailable);
+
+            popup.Content = seatOptions;
+
+            popup.Width = 400;
+            popup.Height = 400;
+
+            popup.ShowDialog();
+        }
+
+        void state(object sender, RoutedEventArgs e)
+        {
+            Button seatOptionButton = (Button)sender;
+            string btnContent = seatOptionButton.Content.ToString();
+            if (btnContent == "Reserved")
+            {
+                sub.Background = reserved;
+            } else if (btnContent == "Sold")
+            {
+                sub.Background = sold;
+            } else if (btnContent == "Unavailable")
+            {
+                sub.Background = unavailable;
             }
         }
         public MainWindow()
         {
             
             InitializeComponent();
-            Title = "Kino";
             ReadFile();
             Content = CreateGrid();
 

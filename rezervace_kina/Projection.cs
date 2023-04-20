@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace rezervace_kina
 {
-    internal class Projection
+    public class Projection
     {
         public string uuid;
         public string name;
-        public string time;
-        public List<Cinema> cinema;
+        public string date;
+        public Cinema cinema;
     }
 }

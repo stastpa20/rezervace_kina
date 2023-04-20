@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace rezervace_kina
 {
-    internal class Cinema
+    public class Cinema
     {
         public string name;
-        public string rows;
-        public string columns;
+        public int rows;
+        public int columns;
     }
 }
