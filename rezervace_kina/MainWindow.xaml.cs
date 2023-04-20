@@ -40,20 +40,26 @@ namespace rezervace_kina
         private Brush reserved = Brushes.DarkOrange;
         Brush unoccupied = Brushes.LightGray;
 
-        void listvju()
+
+        public MainWindow()
+        {
+
+            InitializeComponent();
+            ReadFile();
+            Content = listvju();//CreateGrid();
+
+        }
+
+        ListView listvju()
         {
 
 
             ListView listView = new ListView();
             for (int i = 0; i < projections.Count; i++)
             {
-                string it = projections[i].name;
-                ListViewItem item = new ListViewItem();
-                listView.Items.Add(item);
+                listView.Items.Add($"Kino: {projections[i].cinema.name} Film: {projections[i].name}");
             }
-
-
-            
+            return listView;
         }
         Grid CreateGrid()
         {
@@ -194,13 +200,6 @@ namespace rezervace_kina
                 sub.Background = unavailable;
             }
         }
-        public MainWindow()
-        {
-            
-            InitializeComponent();
-            ReadFile();
-            Content = CreateGrid();
-
-        }
+        
     }
 }
