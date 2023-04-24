@@ -25,6 +25,7 @@ namespace rezervace_kina
         private string jsonpath = "filmy.json";
 
         private Button sub;
+        private Projection subProjection;
 
         private List<Projection> projections;
 
@@ -59,15 +60,23 @@ namespace rezervace_kina
             {
                 listView.Items.Add($"Kino: {projections[i].cinema.name} Film: {projections[i].name}");
             }
+
+            listView.MouseDoubleClick += new MouseButtonEventHandler(listView_DoubleClick);
             return listView;
+        }
+        private void listView_DoubleClick(object sender, MouseEventArgs e)
+        {
+            ListView x = (ListView)sender;
+            var i = x.SelectedIndex;
+
+            rows = projections[i].cinema.rows;
+            columns = projections[i].cinema.columns;
+            Title = projections[i].cinema.name;
+            Content = CreateGrid();
         }
         Grid CreateGrid()
         {
             Grid myGrid = new Grid();
-
-            
-            //myGrid.HorizontalAlignment = HorizontalAlignment.Left;
-            //myGrid.VerticalAlignment = VerticalAlignment.Top;
             
             for (int i = 0; i < columns +2; i++)
             {
@@ -131,9 +140,7 @@ namespace rezervace_kina
                 string real = File.ReadAllText(jsonpath);
                 List<Projection> jsonData = JsonConvert.DeserializeObject<List<Projection>>(real);
                 projections = jsonData;
-                rows = jsonData[0].cinema.rows;
-                columns = jsonData[0].cinema.columns;
-                this.Title = jsonData[0].cinema.name;
+                
             }
             else
             {
