@@ -25,7 +25,7 @@ namespace rezervace_kina
         private string jsonpath = "filmy.json";
 
         private Button sub;
-        private Projection subProjection;
+        private Grid subGrid;
 
         private List<Projection> projections;
 
@@ -46,6 +46,7 @@ namespace rezervace_kina
         {
 
             InitializeComponent();
+            Title = "Seznam Projekcí";
             ReadFile();
             Content = listvju();//CreateGrid();
 
@@ -93,14 +94,30 @@ namespace rezervace_kina
                 {
                     if (j == 0)
                     {
-                        Label lbl = new Label();
-                        lbl.Name = "platno";
-                        lbl.Content = "platno";
-                        lbl.HorizontalContentAlignment = HorizontalAlignment.Center;
-                        lbl.Background = Brushes.DarkGray;
-                        lbl.Foreground = Brushes.White;
-                        Grid.SetColumnSpan(lbl, columns + 2);
-                        myGrid.Children.Add(lbl);
+                        if (i == 0)
+                        {
+                            Label lbl = new Label();
+                            lbl.Name = "platno";
+                            lbl.Content = "platno";
+                            lbl.HorizontalContentAlignment = HorizontalAlignment.Center;
+                            lbl.Background = Brushes.DarkGray;
+                            lbl.Foreground = Brushes.White;
+                            Grid.SetColumnSpan(lbl, columns + 1);
+                            myGrid.Children.Add(lbl);
+                        } else if (i == columns + 1)
+                        {
+                            Button btn = new Button();
+                            btn.Content = "X";
+                            btn.HorizontalAlignment = HorizontalAlignment.Stretch;
+                            btn.VerticalAlignment = VerticalAlignment.Stretch;
+                            btn.Click += crossClick;
+                            btn.BorderThickness = new Thickness(0);
+                            btn.Background = Brushes.Red;
+                            Grid.SetRow(btn, j);
+                            Grid.SetColumn(btn, i);
+                            myGrid.Children.Add(btn);
+                        }
+                        
                     }
                     else if (i == 0 || i == columns + 1)
                     {
@@ -119,8 +136,6 @@ namespace rezervace_kina
                         btn.HorizontalAlignment = HorizontalAlignment.Stretch;
                         btn.VerticalAlignment = VerticalAlignment.Stretch;
                         btn.Click += seatClick;
-
-
                         Grid.SetRow(btn, j);
                         Grid.SetColumn(btn, i);
                         myGrid.Children.Add(btn);
@@ -142,9 +157,6 @@ namespace rezervace_kina
                 projections = jsonData;
                 
             }
-            else
-            {
-            }
         }
 
         void seatClick(object sender, RoutedEventArgs e)
@@ -154,6 +166,7 @@ namespace rezervace_kina
 
             Window popup = new Window();
             Grid seatOptions = new Grid();
+            
             for (int i = 0; i < 3; i++)
             {
                 seatOptions.ColumnDefinitions.Add(new ColumnDefinition());
@@ -183,6 +196,7 @@ namespace rezervace_kina
             seatOptions.Children.Add(Reserved);
             seatOptions.Children.Add(Sold);
             seatOptions.Children.Add(Unavailable);
+            subGrid = seatOptions;
 
             popup.Content = seatOptions;
 
@@ -192,13 +206,41 @@ namespace rezervace_kina
             popup.ShowDialog();
         }
 
+        void crossClick(object sender, RoutedEventArgs e)
+        {
+            Content = listvju();
+            Title = "Seznam Projekcí";
+        }
+
         void state(object sender, RoutedEventArgs e)
         {
+
             Button seatOptionButton = (Button)sender;
             string btnContent = seatOptionButton.Content.ToString();
             if (btnContent == "Reserved")
             {
-                sub.Background = reserved;
+                TextBox nameBox = new TextBox();
+                nameBox.Text = "jméno";
+                nameBox.FontStretch = new FontStretch();
+                nameBox.LayoutTransform = new ScaleTransform();
+                Grid.SetRow(nameBox, 0);
+                Grid.SetColumn(nameBox, 0);
+                Grid.SetColumnSpan(nameBox, 3);
+                nameBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+                nameBox.VerticalAlignment = VerticalAlignment.Stretch;
+                TextBox emailBox = new TextBox();
+                emailBox.Text = "email";
+                Grid.SetRow(emailBox, 1);
+                Grid.SetColumn(emailBox, 0);
+                Grid.SetColumnSpan(emailBox, 3);
+                emailBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+                emailBox.VerticalAlignment = VerticalAlignment.Stretch;
+                subGrid.Children.Add(nameBox);
+                subGrid.Children.Add(emailBox);
+                if (true)
+                {
+                    sub.Background = reserved;
+                }
             } else if (btnContent == "Sold")
             {
                 sub.Background = sold;
