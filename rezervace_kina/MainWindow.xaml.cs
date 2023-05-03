@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,6 +28,9 @@ namespace rezervace_kina
         private Grid subGrid;
 
         private List<Projection> projections;
+
+        TextBox subNameBox;
+        TextBox subEmailBox;
 
         private static List<string> jsonlist = new List<string>();
         //private string jsonText; 
@@ -193,6 +196,32 @@ namespace rezervace_kina
             Grid.SetRow(Unavailable, 2);
             Grid.SetColumn(Unavailable, 2);
 
+            TextBox nameBox = new TextBox();
+            nameBox.Text = "jméno";
+            nameBox.Name = "NameBox";
+            nameBox.FontStretch = new FontStretch();
+            nameBox.LayoutTransform = new ScaleTransform();
+            Grid.SetRow(nameBox, 0);
+            Grid.SetColumn(nameBox, 0);
+            Grid.SetColumnSpan(nameBox, 3);
+            nameBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+            nameBox.VerticalAlignment = VerticalAlignment.Stretch;
+            TextBox emailBox = new TextBox();
+            emailBox.Text = "email";
+            emailBox.Name = "EmailBox";
+            Grid.SetRow(emailBox, 1);
+            Grid.SetColumn(emailBox, 0);
+            Grid.SetColumnSpan(emailBox, 3);
+            emailBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+            emailBox.VerticalAlignment = VerticalAlignment.Stretch;
+
+            seatOptions.Children.Add(nameBox);
+            seatOptions.Children.Add(emailBox);
+            nameBox.Visibility = Visibility.Hidden;
+            emailBox.Visibility = Visibility.Collapsed;
+            subNameBox = nameBox;
+            subEmailBox = emailBox;
+
             seatOptions.Children.Add(Reserved);
             seatOptions.Children.Add(Sold);
             seatOptions.Children.Add(Unavailable);
@@ -219,33 +248,21 @@ namespace rezervace_kina
             string btnContent = seatOptionButton.Content.ToString();
             if (btnContent == "Reserved")
             {
-                TextBox nameBox = new TextBox();
-                nameBox.Text = "jméno";
-                nameBox.FontStretch = new FontStretch();
-                nameBox.LayoutTransform = new ScaleTransform();
-                Grid.SetRow(nameBox, 0);
-                Grid.SetColumn(nameBox, 0);
-                Grid.SetColumnSpan(nameBox, 3);
-                nameBox.HorizontalAlignment = HorizontalAlignment.Stretch;
-                nameBox.VerticalAlignment = VerticalAlignment.Stretch;
-                TextBox emailBox = new TextBox();
-                emailBox.Text = "email";
-                Grid.SetRow(emailBox, 1);
-                Grid.SetColumn(emailBox, 0);
-                Grid.SetColumnSpan(emailBox, 3);
-                emailBox.HorizontalAlignment = HorizontalAlignment.Stretch;
-                emailBox.VerticalAlignment = VerticalAlignment.Stretch;
-                subGrid.Children.Add(nameBox);
-                subGrid.Children.Add(emailBox);
-                if (true)
+                subNameBox.Visibility = Visibility.Visible;
+                subEmailBox.Visibility = Visibility.Visible;
+                if (subNameBox.Text != "jméno" & subEmailBox.Text != "email")
                 {
                     sub.Background = reserved;
                 }
             } else if (btnContent == "Sold")
             {
+                subNameBox.Visibility = Visibility.Hidden;
+                subEmailBox.Visibility = Visibility.Hidden;
                 sub.Background = sold;
             } else if (btnContent == "Unavailable")
             {
+                subNameBox.Visibility = Visibility.Hidden;
+                subEmailBox.Visibility = Visibility.Hidden;
                 sub.Background = unavailable;
             }
         }
