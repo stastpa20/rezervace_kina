@@ -10,10 +10,16 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Newtonsoft.Json;
+using SQLite;
+using SQLitePCL;
+using SQLite;
+using System.Windows.Media.Media3D;
+
 
 namespace rezervace_kina
 {
@@ -22,10 +28,20 @@ namespace rezervace_kina
     /// </summary>
     public partial class MainWindow : Window
     {
+        //values
+        int rowValue;
+        int columnValue;
+        string uuidValue;
+        string movieNameValue;
+        string cinemaNameValue;
+        string stateValue;
+
         private string jsonpath = "filmy.json";
 
         private Button sub;
         private Grid subGrid;
+
+        SQLiteConnection conn;
 
         private List<Projection> projections;
 
@@ -55,6 +71,80 @@ namespace rezervace_kina
 
         }
 
+        SQLiteConnection _connection;
+        string DataSource;
+
+        public void InitialiseConnection()
+        {
+            DataSource = "seats.db";
+            
+            SQLiteConnectionString options = new SQLiteConnectionString(DataSource, false);
+
+            _connection = new SQLiteConnection(options);
+        }
+        public void GetRecords()
+        {
+            var options = new SQLiteConnectionString(DataSource, false);
+            var conn = new SQLiteConnection(options);
+
+            string query = $"SELECT * FROM seats";
+
+            var results = conn.Query<seat>(query);
+
+            conn.Close();
+        }
+        public void InsertRecord()
+        {
+            InitialiseConnection();
+            SQLiteConnectionString options = new SQLiteConnectionString(DataSource, false);
+            SQLiteConnection conn = new SQLiteConnection(options);
+
+            string query = $"INSERT INTO seats VALUES ('{new Guid()}', '{rowValue}', '{columnValue}', '{uuidValue}', '{cinemaNameValue}', '{movieNameValue}', '{stateValue}')";
+
+            var results = conn.Query<seat>(query);
+
+            conn.Close();
+        }
+        public void UpdateRecord(Guid id)
+        {
+            var options = new SQLiteConnectionString(DataSource, false);
+            var conn = new SQLiteConnection(options);
+
+            var record = new seat { id = id, row = rowValue, column = columnValue, uuid = uuidValue, cinemaName = cinemaNameValue, movieName = movieNameValue, state = stateValue };
+
+            var results = conn.Update(record);
+
+            conn.Close();
+        }
+
+        public void DeleteRecord(string id)
+        {
+            var options = new SQLiteConnectionString(DataSource, false);
+            var conn = new SQLiteConnection(options);
+
+            conn.Delete<seat>(id);
+            conn.Close();
+        }
+
+        /*private void dbInsert(string stateValue)
+        {
+
+            string databasePath = "seats.db";
+            conn = new SQLiteConnection(databasePath);
+            SQLiteCommand sqlite_cmd = conn.CreateCommand("SELECT * FROM seats");
+
+
+            string database_connection = "Data Source=seats.db;Version=3;";
+            SQLiteConnection connection = new SQLiteConnection(database_connection);
+            
+
+            conn.Query<seat>($"INSERT INTO seats VALUES ('{new Guid()}', '{rowValue}', '{columnValue}', '{uuidValue}', '{cinemaNameValue}', '{movieNameValue}', '{stateValue}')");
+            var record = new Record { id = new Guid(), row = rowValue, column = columnValue, uuid = uuidValue, cinemaName = cinemaNameValue, movieName = movieNameValue, state = stateValue };
+            var results = conn.Insert(record);
+
+        }*/
+
+
         ListView listvju()
         {
 
@@ -77,6 +167,9 @@ namespace rezervace_kina
             columns = projections[i].cinema.columns;
             Title = projections[i].cinema.name;
             Content = CreateGrid();
+            cinemaNameValue = projections[i].cinema.name;
+            movieNameValue = projections[i].name;
+            uuidValue = projections[i].uuid;
         }
         Grid CreateGrid()
         {
@@ -119,8 +212,7 @@ namespace rezervace_kina
                             Grid.SetRow(btn, j);
                             Grid.SetColumn(btn, i);
                             myGrid.Children.Add(btn);
-                        }
-                        
+                        }                        
                     }
                     else if (i == 0 || i == columns + 1)
                     {
@@ -142,12 +234,9 @@ namespace rezervace_kina
                         Grid.SetRow(btn, j);
                         Grid.SetColumn(btn, i);
                         myGrid.Children.Add(btn);
-                    }
-                    
+                    }                    
                 }
             }
-            
-
             return myGrid;
         }
 
@@ -157,8 +246,7 @@ namespace rezervace_kina
             {
                 string real = File.ReadAllText(jsonpath);
                 List<Projection> jsonData = JsonConvert.DeserializeObject<List<Projection>>(real);
-                projections = jsonData;
-                
+                projections = jsonData;                
             }
         }
 
@@ -166,6 +254,11 @@ namespace rezervace_kina
         {
             Button seatButton = (Button)sender;
             sub = seatButton;
+
+            List<string> rowcolumn = seatButton.Content.ToString().Split('-').ToList();
+
+            rowValue = int.Parse(rowcolumn[0]);
+            columnValue = int.Parse(rowcolumn[1]);
 
             Window popup = new Window();
             Grid seatOptions = new Grid();
@@ -246,26 +339,54 @@ namespace rezervace_kina
 
             Button seatOptionButton = (Button)sender;
             string btnContent = seatOptionButton.Content.ToString();
+            stateValue = btnContent;
             if (btnContent == "Reserved")
             {
                 subNameBox.Visibility = Visibility.Visible;
                 subEmailBox.Visibility = Visibility.Visible;
                 if (subNameBox.Text != "jméno" & subEmailBox.Text != "email")
                 {
+                    InsertRecord();
                     sub.Background = reserved;
                 }
             } else if (btnContent == "Sold")
             {
                 subNameBox.Visibility = Visibility.Hidden;
                 subEmailBox.Visibility = Visibility.Hidden;
+                InsertRecord();
                 sub.Background = sold;
             } else if (btnContent == "Unavailable")
             {
                 subNameBox.Visibility = Visibility.Hidden;
                 subEmailBox.Visibility = Visibility.Hidden;
+                InsertRecord();
                 sub.Background = unavailable;
             }
         }
-        
+
+        [Table("seats")]
+        public class seat
+        {
+            [PrimaryKey]
+            [Column("id")]
+            public Guid id { get; set; }
+            
+            [Column("row")]
+            public int row { get; set; }
+            [Column("column")]
+            public int column { get; set; }
+
+            [Column("uuid")]
+            public string uuid { get; set; }
+
+            [Column("cinemaName")]
+            public string cinemaName { get; set; }
+            [Column("movieName")]
+            public string movieName { get; set; }
+
+            [Column("state")]
+            public string state { get; set; }
+        }
+
     }
 }
