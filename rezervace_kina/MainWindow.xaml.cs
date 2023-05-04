@@ -19,6 +19,7 @@ using SQLite;
 using SQLitePCL;
 using SQLite;
 using System.Windows.Media.Media3D;
+using System.Xml.Linq;
 
 
 namespace rezervace_kina
@@ -40,6 +41,8 @@ namespace rezervace_kina
 
         private Button sub;
         private Grid subGrid;
+
+        private List<List<(Button, seat)>> subButtons = new List<List<(Button, seat)>>();
 
         SQLiteConnection conn;
 
@@ -77,21 +80,34 @@ namespace rezervace_kina
         public void InitialiseConnection()
         {
             DataSource = "seats.db";
+
             
             SQLiteConnectionString options = new SQLiteConnectionString(DataSource, false);
 
-            _connection = new SQLiteConnection(options);
+            conn = new SQLiteConnection(options);
+            try
+            {
+                string query = $"SELECT * FROM seats";
+                conn.Query<seat>(query);
+            }
+            catch
+            {
+                conn.CreateTable<seat>();
+            }
         }
-        public void GetRecords()
+        public List<seat> GetRecords()
         {
+            InitialiseConnection();
             var options = new SQLiteConnectionString(DataSource, false);
             var conn = new SQLiteConnection(options);
 
             string query = $"SELECT * FROM seats";
 
-            var results = conn.Query<seat>(query);
+            List<seat> results = conn.Query<seat>(query);
 
             conn.Close();
+
+            return results;
         }
         public void InsertRecord()
         {
@@ -99,9 +115,10 @@ namespace rezervace_kina
             SQLiteConnectionString options = new SQLiteConnectionString(DataSource, false);
             SQLiteConnection conn = new SQLiteConnection(options);
 
-            string query = $"INSERT INTO seats VALUES ('{new Guid()}', '{rowValue}', '{columnValue}', '{uuidValue}', '{cinemaNameValue}', '{movieNameValue}', '{stateValue}')";
+            string query = $"INSERT INTO seats VALUES ('{Guid.NewGuid()}', '{rowValue}', '{columnValue}', '{uuidValue}', '{cinemaNameValue}', '{movieNameValue}', '{stateValue}')";
 
             var results = conn.Query<seat>(query);
+
 
             conn.Close();
         }
@@ -109,10 +126,8 @@ namespace rezervace_kina
         {
             var options = new SQLiteConnectionString(DataSource, false);
             var conn = new SQLiteConnection(options);
-
-            var record = new seat { id = id, row = rowValue, column = columnValue, uuid = uuidValue, cinemaName = cinemaNameValue, movieName = movieNameValue, state = stateValue };
-
-            var results = conn.Update(record);
+            string query = $"UPDATE seats SET state = '{stateValue}' WHERE id = '{id}'";
+            var results = conn.Query<seat>(query);
 
             conn.Close();
         }
@@ -125,24 +140,6 @@ namespace rezervace_kina
             conn.Delete<seat>(id);
             conn.Close();
         }
-
-        /*private void dbInsert(string stateValue)
-        {
-
-            string databasePath = "seats.db";
-            conn = new SQLiteConnection(databasePath);
-            SQLiteCommand sqlite_cmd = conn.CreateCommand("SELECT * FROM seats");
-
-
-            string database_connection = "Data Source=seats.db;Version=3;";
-            SQLiteConnection connection = new SQLiteConnection(database_connection);
-            
-
-            conn.Query<seat>($"INSERT INTO seats VALUES ('{new Guid()}', '{rowValue}', '{columnValue}', '{uuidValue}', '{cinemaNameValue}', '{movieNameValue}', '{stateValue}')");
-            var record = new Record { id = new Guid(), row = rowValue, column = columnValue, uuid = uuidValue, cinemaName = cinemaNameValue, movieName = movieNameValue, state = stateValue };
-            var results = conn.Insert(record);
-
-        }*/
 
 
         ListView listvju()
@@ -166,7 +163,7 @@ namespace rezervace_kina
             rows = projections[i].cinema.rows;
             columns = projections[i].cinema.columns;
             Title = projections[i].cinema.name;
-            Content = CreateGrid();
+            Content = CreateGrid(); 
             cinemaNameValue = projections[i].cinema.name;
             movieNameValue = projections[i].name;
             uuidValue = projections[i].uuid;
@@ -184,8 +181,10 @@ namespace rezervace_kina
                 myGrid.RowDefinitions.Add(new RowDefinition());
             }
 
+            List<List<(Button, seat)>> buttons = new List<List<(Button, seat)>>();
             for (int i = 0; i < columns + 2; i++)
             {
+                List<(Button, seat)> column = new List<(Button, seat)>();
                 for (int j = 0; j < rows + 1; j++)
                 {
                     if (j == 0)
@@ -234,9 +233,36 @@ namespace rezervace_kina
                         Grid.SetRow(btn, j);
                         Grid.SetColumn(btn, i);
                         myGrid.Children.Add(btn);
+
+                        column.Add((btn, null));
                     }                    
                 }
+                buttons.Add(column);
             }
+
+            subButtons = buttons;
+            List<seat> reservations = GetRecords();
+            for (int i = 0; i < reservations.Count; i++)
+            {
+                Button button = buttons[reservations[i].column][reservations[i].row - 1].Item1;
+                buttons[reservations[i].column][reservations[i].row - 1] = (button, reservations[i]);
+                switch (reservations[i].state)
+                {
+                    case "Reserved":
+                        button.Background = reserved;
+                        break;
+                    case "Sold":
+                        button.Background = sold;
+                        break;
+                    case "Unavailable":
+                        button.Background = unavailable;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+
             return myGrid;
         }
 
@@ -353,7 +379,17 @@ namespace rezervace_kina
             {
                 subNameBox.Visibility = Visibility.Hidden;
                 subEmailBox.Visibility = Visibility.Hidden;
-                InsertRecord();
+                List<seat> reservations = GetRecords();
+                for (int i = 0; i < reservations.Count; i++)
+                {
+                    (Button, seat) tvojeMama = subButtons[reservations[i].column][reservations[i].row - 1];
+                    if (tvojeMama.Item1.Content == sub.Content)
+                    {
+                        stateValue = btnContent;
+                        UpdateRecord(tvojeMama.Item2.id);
+                    } else{ InsertRecord(); }
+                }
+                
                 sub.Background = sold;
             } else if (btnContent == "Unavailable")
             {
