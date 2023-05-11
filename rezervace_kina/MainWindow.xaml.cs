@@ -17,7 +17,6 @@ using System.Windows.Shapes;
 using Newtonsoft.Json;
 using SQLite;
 using SQLitePCL;
-using SQLite;
 using System.Windows.Media.Media3D;
 using System.Xml.Linq;
 
@@ -37,6 +36,8 @@ namespace rezervace_kina
         string cinemaNameValue;
         string stateValue;
 
+        //filepaths
+        string DataSource = "seats.db";
         private string jsonpath = "filmy.json";
 
         private Button sub;
@@ -44,7 +45,9 @@ namespace rezervace_kina
 
         private List<List<(Button, seat)>> subButtons = new List<List<(Button, seat)>>();
 
-        SQLiteConnection conn;
+        List<List<(Button, seat)>> buttons = new List<List<(Button, seat)>>();
+
+        List<seat> reservations = new List<seat>();
 
         private List<Projection> projections;
 
@@ -52,40 +55,33 @@ namespace rezervace_kina
         TextBox subEmailBox;
 
         private static List<string> jsonlist = new List<string>();
-        //private string jsonText; 
 
         private int rows = 7;
         private int columns = 22;
 
+        //brushes
         private Brush unavailable = Brushes.DarkGray;
         private Brush sold = Brushes.Crimson;
-        private Brush selected = Brushes.LightBlue;
         private Brush reserved = Brushes.DarkOrange;
         Brush unoccupied = Brushes.LightGray;
 
 
         public MainWindow()
         {
-
             InitializeComponent();
+            InitialiseConnection();
             Title = "Seznam Projekcí";
+            ResizeMode = ResizeMode.NoResize;
             ReadFile();
-            Content = listvju();//CreateGrid();
-
+            Content = listvju();
         }
-
-        SQLiteConnection _connection;
-        string DataSource;
-
 
         // init
         public void InitialiseConnection()
-        {
-            DataSource = "seats.db";
-            
+        {            
             SQLiteConnectionString options = new SQLiteConnectionString(DataSource, false);
 
-            conn = new SQLiteConnection(options);
+            SQLiteConnection conn = new SQLiteConnection(options);
             try
             {
                 string query = $"SELECT * FROM seats";
@@ -100,30 +96,23 @@ namespace rezervace_kina
         // select and return all seats
         public List<seat> GetRecords()
         {
-            InitialiseConnection();
             var options = new SQLiteConnectionString(DataSource, false);
             var conn = new SQLiteConnection(options);
 
-            string query = $"SELECT * FROM seats";
+            var results = conn.Table<seat>().ToList();
 
-            List<seat> results = conn.Query<seat>(query);
-
-            conn.Close();
-
-            return results;
+            return results;            
         }
 
         // insert new record into table
         public void InsertRecord()
         {
-            InitialiseConnection();
-            SQLiteConnectionString options = new SQLiteConnectionString(DataSource, false);
-            SQLiteConnection conn = new SQLiteConnection(options);
+            var options = new SQLiteConnectionString(DataSource, false);
+            var conn = new SQLiteConnection(options);
 
-            string query = $"INSERT INTO seats VALUES ('{Guid.NewGuid()}', '{rowValue}', '{columnValue}', '{uuidValue}', '{cinemaNameValue}', '{movieNameValue}', '{stateValue}')";
+            var record = new seat { id = Guid.NewGuid(), row = rowValue, column = columnValue, uuid = uuidValue, cinemaName = cinemaNameValue, movieName = movieNameValue, state = stateValue };
 
-            var results = conn.Query<seat>(query);
-
+            var results = conn.Insert(record);
 
             conn.Close();
         }
@@ -133,8 +122,10 @@ namespace rezervace_kina
         {
             var options = new SQLiteConnectionString(DataSource, false);
             var conn = new SQLiteConnection(options);
-            string query = $"UPDATE seats SET state = '{stateValue}' WHERE id = '{id}'";
-            var results = conn.Query<seat>(query);
+
+            var record = new seat { id = id, row = rowValue, column = columnValue, uuid = uuidValue, cinemaName = cinemaNameValue, movieName = movieNameValue, state = stateValue };
+
+            var results = conn.Update(record);
 
             conn.Close();
         }
@@ -145,7 +136,7 @@ namespace rezervace_kina
             var options = new SQLiteConnectionString(DataSource, false);
             var conn = new SQLiteConnection(options);
 
-            conn.Delete<seat>(id);
+            var result = conn.Delete<seat>(id);
             conn.Close();
         }
 
@@ -171,10 +162,10 @@ namespace rezervace_kina
             rows = projections[i].cinema.rows;
             columns = projections[i].cinema.columns;
             Title = projections[i].cinema.name;
-            Content = CreateGrid(); 
             cinemaNameValue = projections[i].cinema.name;
             movieNameValue = projections[i].name;
             uuidValue = projections[i].uuid;
+            Content = CreateGrid();            
         }
 
         // create new cinema grid
@@ -182,9 +173,9 @@ namespace rezervace_kina
         {
             // new grid 
             Grid myGrid = new Grid();
-            
+
             // add rows and columns into grid
-            for (int i = 0; i < columns +2; i++)
+            for (int i = 0; i < columns + 2; i++)
             {
                 myGrid.ColumnDefinitions.Add(new ColumnDefinition());
             }
@@ -192,10 +183,7 @@ namespace rezervace_kina
             {
                 myGrid.RowDefinitions.Add(new RowDefinition());
             }
-
-
-            List<List<(Button, seat)>> buttons = new List<List<(Button, seat)>>();
-
+            buttons = new List<List<(Button, seat)>>();
             for (int i = 0; i < columns + 2; i++)
             {
                 List<(Button, seat)> column = new List<(Button, seat)>();
@@ -228,7 +216,7 @@ namespace rezervace_kina
                             Grid.SetRow(btn, j);
                             Grid.SetColumn(btn, i);
                             myGrid.Children.Add(btn);
-                        }                        
+                        }
                     }
                     // rows label
                     else if (i == 0 || i == columns + 1)
@@ -237,8 +225,8 @@ namespace rezervace_kina
                         lbl.Content = (j).ToString();
                         lbl.Background = Brushes.Orange;
                         lbl.Foreground = Brushes.White;
-                        Grid.SetRow(lbl,j);
-                        Grid.SetColumn(lbl,i);
+                        Grid.SetRow(lbl, j);
+                        Grid.SetColumn(lbl, i);
                         myGrid.Children.Add(lbl);
                     }
                     // seats buttons
@@ -254,37 +242,43 @@ namespace rezervace_kina
                         myGrid.Children.Add(btn);
 
                         column.Add((btn, null));
-                        buttons.Add(column);
-                    }                    
-                }                
-            }
-
-            subButtons = buttons;
-            List<seat> reservations = GetRecords();
-            for (int i = 0; i < reservations.Count; i++)
-            {
-                Button button = buttons[reservations[i].column][reservations[i].row].Item1;
-                buttons[reservations[i].column][reservations[i].row] = (button, reservations[i]);
-                switch (reservations[i].state)
-                {
-                    case "Reserved":
-                        button.Background = reserved;
-                        break;
-                    case "Sold":
-                        button.Background = sold;
-                        break;
-                    case "Unavailable":
-                        button.Background = unavailable;
-                        break;
-                    default:
-                        break;
+                    }
                 }
+                if (i != 0 && i != columns + 1) { buttons.Add(column); }                
             }
-
-
+            subButtons = buttons;
+            reservations = GetRecords();
+            udelej();
+            
             return myGrid;
+
         }
 
+        void udelej()
+        {
+            for (int i = 0; i < reservations.Count; i++)
+            {
+                if (reservations[i].uuid == uuidValue)
+                {
+                    Button button = buttons[reservations[i].column - 1][reservations[i].row - 1].Item1;
+                    buttons[reservations[i].column - 1][reservations[i].row - 1] = (button, reservations[i]);
+                    switch (reservations[i].state)
+                    {
+                        case "Reserved":
+                            button.Background = reserved;
+                            break;
+                        case "Sold":
+                            button.Background = sold;
+                            break;
+                        case "Unavailable":
+                            button.Background = unavailable;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
         // save json data into List of Projections "projections"
         void ReadFile()
         {
@@ -299,8 +293,8 @@ namespace rezervace_kina
         // seat onclick
         void seatClick(object sender, RoutedEventArgs e)
         {
-
             Button seatButton = (Button)sender;
+            //seatButton.Background = selected;
             sub = seatButton;
 
             List<string> rowcolumn = seatButton.Content.ToString().Split('-').ToList();
@@ -312,7 +306,7 @@ namespace rezervace_kina
             Window popup = new Window();
             Grid seatOptions = new Grid();
             
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
                 seatOptions.ColumnDefinitions.Add(new ColumnDefinition());
             }
@@ -341,6 +335,13 @@ namespace rezervace_kina
             Unavailable.Click += state;
             Grid.SetRow(Unavailable, 2);
             Grid.SetColumn(Unavailable, 2);
+
+            // unavailable button
+            Button Vacant = new Button();
+            Vacant.Content = "Vacant";
+            Vacant.Click += state;
+            Grid.SetRow(Vacant, 2);
+            Grid.SetColumn(Vacant, 3);
 
             // reservation form textboxes
             // name textbox
@@ -376,12 +377,14 @@ namespace rezervace_kina
             seatOptions.Children.Add(Reserved);
             seatOptions.Children.Add(Sold);
             seatOptions.Children.Add(Unavailable);
+            seatOptions.Children.Add(Vacant);
             subGrid = seatOptions;
 
             // set new window
             popup.Content = seatOptions;
             popup.Width = 400;
             popup.Height = 400;
+            popup.ResizeMode = ResizeMode.NoResize;
 
             // show new window
             popup.ShowDialog();
@@ -405,9 +408,23 @@ namespace rezervace_kina
             {
                 subNameBox.Visibility = Visibility.Visible;
                 subEmailBox.Visibility = Visibility.Visible;
+                reservations = GetRecords();
                 if (subNameBox.Text != "jméno" & subEmailBox.Text != "email")
                 {
-                    InsertRecord();
+                    if (reservations.Count > 0)
+                    {
+                        for (int i = 0; i < reservations.Count; i++)
+                        {
+                            (Button, seat) tvojeMama = buttons[reservations[i].column - 1][reservations[i].row - 1];
+                            if (tvojeMama.Item1.Content == sub.Content)
+                            {
+                                stateValue = btnContent;
+                                UpdateRecord(tvojeMama.Item2.id);
+                            }
+                            else { InsertRecord(); break; }
+                        }
+                    }
+                    else { InsertRecord(); }
                     sub.Background = reserved;
                 }
             }
@@ -416,17 +433,21 @@ namespace rezervace_kina
             {
                 subNameBox.Visibility = Visibility.Hidden;
                 subEmailBox.Visibility = Visibility.Hidden;
-                List<seat> reservations = GetRecords();
-                for (int i = 0; i < reservations.Count; i++)
+                reservations = GetRecords(); udelej();
+                if (reservations.Count > 0)
                 {
-                    (Button, seat) tvojeMama = subButtons[reservations[i].column][reservations[i].row - 1];
-                    if (tvojeMama.Item1.Content == sub.Content)
+                    for (int i = 0; i < reservations.Count; i++)
                     {
-                        stateValue = btnContent;
-                        UpdateRecord(tvojeMama.Item2.id);
-                    } else { InsertRecord(); }
-                }
-                
+                        (Button, seat) tvojeMama = buttons[reservations[i].column - 1][reservations[i].row - 1];
+                        if (tvojeMama.Item1.Content == sub.Content)
+                        {
+                            stateValue = btnContent;
+                            UpdateRecord(tvojeMama.Item2.id);
+                        }
+                        else { InsertRecord(); break; }
+                    }
+                } else { InsertRecord(); }
+                               
                 sub.Background = sold;
             }
             // unavaible button click
@@ -434,17 +455,39 @@ namespace rezervace_kina
             {
                 subNameBox.Visibility = Visibility.Hidden;
                 subEmailBox.Visibility = Visibility.Hidden;
-                List<seat> reservations = GetRecords();
+                reservations = GetRecords(); udelej();
+                /*if (reservations.Count > 0)
+                {
+                    for (int i = 0; i < reservations.Count; i++)
+                    {
+                        (Button, seat) tvojeMama = buttons[reservations[i].column - 1][reservations[i].row - 1];
+                        if (tvojeMama.Item1.Content == sub.Content)
+                        {
+                            stateValue = btnContent;
+                            UpdateRecord(tvojeMama.Item2.id);
+                        }
+                        else { InsertRecord(); break; }
+                    }
+                }
+                else { InsertRecord(); }*/
+
+                sub.Background = unavailable;
+            } 
+            else if (btnContent == "Vacant")
+            {
+                subNameBox.Visibility = Visibility.Hidden;
+                subEmailBox.Visibility = Visibility.Hidden;
+                reservations = GetRecords(); udelej();
                 for (int i = 0; i < reservations.Count; i++)
                 {
-                    (Button, seat) tvojeMama = subButtons[reservations[i].column][reservations[i].row - 1];
+                    (Button, seat) tvojeMama = buttons[reservations[i].column - 1][reservations[i].row - 1];
                     if (tvojeMama.Item1.Content == sub.Content)
                     {
                         stateValue = btnContent;
-                        UpdateRecord(tvojeMama.Item2.id);
-                    } else { InsertRecord(); }
+                        DeleteRecord(tvojeMama.Item2.id.ToString());
+                    }
                 }
-                sub.Background = unavailable;
+                sub.Background = unoccupied;
             }
         }
 
